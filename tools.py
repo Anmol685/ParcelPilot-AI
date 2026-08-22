@@ -2,7 +2,7 @@ import os
 import pandas as pd
 from langchain_community.document_loaders import PyPDFLoader
 
-EXCEL_PATH = "data/excel/ParcelPilot_Assessment_Data.xlsx"
+EXCEL_PATH = "ParcelPilot_Assessment_Data.xlsx"
 PDF_FOLDER = "data/pdfs"
 
 # ==========================
