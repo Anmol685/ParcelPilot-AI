@@ -1,21 +1,17 @@
-# ParcelPilot AI Support Agent
+# ParcelPilot AI
 
-AI support chatbot built with Streamlit.
+AI-powered Internal Operations Support Chatbot built with Streamlit, Gemini 3.6 Flash, LangChain and FAISS.
 
 ## Features
+- PDF policy retrieval (RAG)
 - Order lookup
+- Account lookup
 - Ticket lookup
-- Policy search (RAG)
-- P1 escalation workflow
+- Escalation workflow
 
 ## Tech Stack
-- Python
 - Streamlit
+- Gemini 3.6 Flash
+- LangChain
+- FAISS
 - Pandas
-
-## Run
-
-```bash
-pip install -r requirements.txt
-streamlit run app.py
-```
