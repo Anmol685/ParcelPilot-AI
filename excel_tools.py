@@ -1,9 +1,10 @@
 import pandas as pd
 import os
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 EXCEL_PATH = os.path.join(
-    "data",
-    "excel",
+    BASE_DIR,
     "ParcelPilot_Assessment_Data.xlsx"
 )
 
@@ -23,19 +24,17 @@ tickets.columns = tickets.columns.str.strip()
 def format_result(df, value, title):
     value = str(value).strip().upper()
 
-    # Search in every column
     for col in df.columns:
-        result = df[
-            df[col].astype(str).str.strip().str.upper() == value
-        ]
+        temp = df[df[col].astype(str).str.strip().str.upper() == value]
 
-        if not result.empty:
-            row = result.iloc[0]
+        if not temp.empty:
+            row = temp.iloc[0]
 
             text = f"## {title}\n\n"
 
             for c in row.index:
                 v = row[c]
+
                 if pd.isna(v):
                     v = "N/A"
 
@@ -43,7 +42,7 @@ def format_result(df, value, title):
 
             return text
 
-    return f"❌ {title} not found."
+    return f"{title} not found."
 
 
 def get_order(order_id):
