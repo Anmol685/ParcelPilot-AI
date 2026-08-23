@@ -78,9 +78,13 @@ pip install -r requirements.txt
 
 ### 3. Create a `.env` File
 
+Create a `.env` file in the project root and add:
+
 ```env
 GEMINI_API_KEY=YOUR_GEMINI_API_KEY
 ```
+
+> **Note:** Generate your API key from Google AI Studio. Never commit your actual API key to GitHub. The hosted Streamlit app stores it securely using Streamlit Secrets.
 
 ### 4. Run the Application
 
