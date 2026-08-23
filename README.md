@@ -1,6 +1,6 @@
-# ParcelPilot AI
+# ParcelPilot AI Support Agent
 
-AI-powered Internal Operations Support Chatbot built with Streamlit, Gemini 3.6 Flash, LangChain and FAISS.
+An internal operations chatbot built with Streamlit, Gemini 3.6 Flash, LangChain, FAISS and Excel.
 
 ## Features
 - PDF policy retrieval (RAG)
@@ -9,9 +9,9 @@ AI-powered Internal Operations Support Chatbot built with Streamlit, Gemini 3.6 
 - Ticket lookup
 - Escalation workflow
 
-## Tech Stack
-- Streamlit
-- Gemini 3.6 Flash
-- LangChain
-- FAISS
-- Pandas
+## Sample Queries
+- What is the cancellation policy?
+- ORD-1001
+- ACCT-001
+- TKT-501
+- ESCALATE TKT-501
