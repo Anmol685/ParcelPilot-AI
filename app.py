@@ -1,115 +1,158 @@
 import streamlit as st
-from tools import (
-    search_documents,
-    get_excel_info,
-    get_order,
-    get_ticket,
-    ai_reply,
-    create_escalation
+from dotenv import load_dotenv
+import os
+
+from langchain_google_genai import ChatGoogleGenerativeAI
+from tools import search_documents
+from excel_tools import get_order, get_account, get_ticket
+
+load_dotenv()
+
+st.set_page_config(
+    page_title="ParcelPilot AI",
+    page_icon="🤖",
+    layout="wide"
 )
 
-st.set_page_config(page_title="ParcelPilot AI", page_icon="🤖")
-
 st.title("🤖 ParcelPilot AI Support Agent")
-st.write("Internal Operations Support Chatbot")
+st.caption("Internal Operations Support Chatbot")
 
-# -------------------------
-# Session State
-# -------------------------
-if "pending_escalation" not in st.session_state:
-    st.session_state.pending_escalation = None
+llm = ChatGoogleGenerativeAI(
+    model="gemini-3.6-flash",
+    google_api_key=os.getenv("GEMINI_API_KEY"),
+    temperature=0.2
+)
 
-user = st.chat_input("Ask about orders, tickets or policies...")
+# ---------- Session ----------
+if "messages" not in st.session_state:
+    st.session_state.messages = [{
+        "role": "assistant",
+        "content": "👋 Hello! Ask me about orders, tickets, policies or agreements."
+    }]
 
-if user:
-    user = user.strip()
+if "pending_ticket" not in st.session_state:
+    st.session_state.pending_ticket = None
 
-    st.chat_message("user").write(user)
+# ---------- Chat History ----------
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
 
-    # -------------------------
-    # Greeting
-    # -------------------------
-    if any(greet in user.lower() for greet in [
-        "hi", "hello", "hey", "hy", "hii",
-        "kaise ho", "kese ho", "kaisi ho"
-    ]):
-        st.chat_message("assistant").markdown("""
-## 👋 Hello!
+# ---------- Escalation UI ----------
+if st.session_state.pending_ticket:
 
-I'm **ParcelPilot AI**, an Internal Operations Support Chatbot.
+    ticket = st.session_state.pending_ticket
 
-You can ask me:
+    st.warning(f"Create escalation for **{ticket}** ?")
 
-- `excel`
-- `ORD-1001`
-- `TKT-501`
-- `support policy`
-- `cancellation fee`
-- `Why is shipment creation failing?`
-- `escalate TKT-501`
-""")
+    c1, c2 = st.columns(2)
 
-    # -------------------------
-    # Excel
-    # -------------------------
-    elif user.lower() == "excel":
-        st.chat_message("assistant").markdown(get_excel_info())
+    with c1:
+        if st.button("✅ Confirm Escalation", use_container_width=True):
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": f"## ✅ Escalation Created\n\nTicket **{ticket}** has been successfully escalated to Tier-2 Support."
+            })
+            st.session_state.pending_ticket = None
+            st.rerun()
 
-    # -------------------------
-    # Order
-    # -------------------------
-    elif user.upper().startswith("ORD-"):
-        st.chat_message("assistant").markdown(get_order(user))
+    with c2:
+        if st.button("❌ Cancel", use_container_width=True):
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": "Escalation cancelled."
+            })
+            st.session_state.pending_ticket = None
+            st.rerun()
 
-    # -------------------------
-    # Ticket
-    # -------------------------
-    elif user.upper().startswith("TKT-"):
-        st.chat_message("assistant").markdown(get_ticket(user))
+# ---------- User Input ----------
+prompt = st.chat_input("Ask your question...")
 
-    # -------------------------
-    # Escalation
-    # -------------------------
-    elif user.lower().startswith("escalate"):
-        ticket = user.split()[-1].upper()
-        st.session_state.pending_escalation = ticket
-        st.chat_message("assistant").markdown(create_escalation(ticket))
+if prompt:
 
-    elif user.upper() == "CONFIRM":
-        if st.session_state.pending_escalation:
-            ticket = st.session_state.pending_escalation
-            st.chat_message("assistant").success(
-                f"""✅ Escalation Created Successfully
+    st.session_state.messages.append({
+        "role": "user",
+        "content": prompt
+    })
 
-**Ticket:** {ticket}
+    upper = prompt.upper()
 
-Assigned to **Backend Engineering** with **P1 Priority**.
+    try:
+
+        # Order
+        if upper.startswith("ORD-"):
+            reply = get_order(upper.strip())
+
+        # Account
+        elif upper.startswith("ACCT-"):
+            reply = get_account(upper.strip())
+
+        # Ticket
+        elif upper.startswith("TKT-"):
+            reply = get_ticket(upper.strip())
+
+        # Escalation
+        elif upper.startswith("ESCALATE"):
+
+            ticket = upper.replace("ESCALATE", "").strip().upper()
+
+            if not ticket.startswith("TKT-"):
+                reply = "❌ Invalid Ticket ID. Example: TKT-501"
+
+            else:
+                st.session_state.pending_ticket = ticket
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": f"Escalation prepared for **{ticket}**.\n\nClick **✅ Confirm Escalation** above."
+                })
+                st.rerun()
+
+        # PDF + Gemini
+        else:
+
+            context = search_documents(prompt)
+
+            final_prompt = f"""
+You are ParcelPilot AI.
+
+Answer ONLY from the supplied context.
+
+Context:
+{context}
+
+Question:
+{prompt}
 """
-            )
-            st.session_state.pending_escalation = None
+
+            response = llm.invoke(final_prompt)
+
+            if isinstance(response.content, list):
+                reply = ""
+                for part in response.content:
+                    if hasattr(part, "text"):
+                        reply += part.text
+                    elif isinstance(part, dict) and part.get("type") == "text":
+                        reply += part.get("text", "")
+            else:
+                reply = str(response.content)
+
+        if not upper.startswith("ESCALATE"):
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": reply
+            })
+            st.rerun()
+
+    except Exception as e:
+
+        if "RESOURCE_EXHAUSTED" in str(e) or "429" in str(e):
+            reply = "⚠️ Daily Gemini free quota exceeded. Please try again later."
+
         else:
-            st.chat_message("assistant").warning("No pending escalation found.")
+            reply = f"❌ Error: {e}"
 
-    # -------------------------
-    # AI Resolution
-    # -------------------------
-    elif (
-        "shipment" in user.lower()
-        or "500" in user.lower()
-        or "cancellation" in user.lower()
-        or "service credit" in user.lower()
-    ):
-        st.chat_message("assistant").markdown(ai_reply(user))
-
-    # -------------------------
-    # PDF Search
-    # -------------------------
-    else:
-        result = search_documents(user)
-
-        if result == "No matching policy found.":
-            st.chat_message("assistant").markdown(
-                "I couldn't find an exact answer. Try **ORD-1001**, **TKT-501**, **support policy**, or **escalate TKT-501**."
-            )
-        else:
-            st.chat_message("assistant").markdown(result)
+        st.session_state.messages.append({
+            "role": "assistant",
+            "content": reply
+        })
+        st.rerun()

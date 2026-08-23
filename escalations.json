@@ -1,0 +1,7 @@
+[
+    {
+        "ticket_id": "TCK-1001",
+        "reason": "Customer requested escalation",
+        "status": "OPEN"
+    }
+]
