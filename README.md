@@ -84,7 +84,7 @@ Create a `.env` file in the project root and add:
 GEMINI_API_KEY=YOUR_GEMINI_API_KEY
 ```
 
-> **Note:** Generate your API key from Google AI Studio. Never commit your actual API key to GitHub. The hosted Streamlit app stores it securely using Streamlit Secrets.
+> **Note:** Generate your API key from Google AI Studio. Never commit your actual API key to GitHub. The hosted Streamlit app uses Streamlit Secrets to store it securely.
 
 ### 4. Run the Application
 
