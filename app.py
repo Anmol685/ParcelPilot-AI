@@ -8,74 +8,108 @@ from tools import (
     create_escalation
 )
 
-st.set_page_config(
-    page_title="ParcelPilot AI",
-    page_icon="🤖",
-    layout="wide"
-)
+st.set_page_config(page_title="ParcelPilot AI", page_icon="🤖")
 
 st.title("🤖 ParcelPilot AI Support Agent")
-st.write("Ask me about orders, tickets, policies or escalations.")
+st.write("Internal Operations Support Chatbot")
 
-# Chat history
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+# -------------------------
+# Session State
+# -------------------------
+if "pending_escalation" not in st.session_state:
+    st.session_state.pending_escalation = None
 
-if "pending_ticket" not in st.session_state:
-    st.session_state.pending_ticket = None
+user = st.chat_input("Ask about orders, tickets or policies...")
 
-# Show history
-for role, msg in st.session_state.messages:
-    with st.chat_message(role):
-        st.markdown(msg)
+if user:
+    user = user.strip()
 
-# Chat input
-q = st.chat_input("Type your question...")
+    st.chat_message("user").write(user)
 
-if q:
+    # -------------------------
+    # Greeting
+    # -------------------------
+    if any(greet in user.lower() for greet in [
+        "hi", "hello", "hey", "hy", "hii",
+        "kaise ho", "kese ho", "kaisi ho"
+    ]):
+        st.chat_message("assistant").markdown("""
+## 👋 Hello!
 
-    st.session_state.messages.append(("user", q))
+I'm **ParcelPilot AI**, an Internal Operations Support Chatbot.
 
-    # Excel info
-    if q.lower() == "excel":
-        answer = get_excel_info()
+You can ask me:
 
-    # Order lookup
-    elif q.upper().startswith("ORD-"):
-        answer = get_order(q)
+- `excel`
+- `ORD-1001`
+- `TKT-501`
+- `support policy`
+- `cancellation fee`
+- `Why is shipment creation failing?`
+- `escalate TKT-501`
+""")
 
-    # Ticket lookup
-    elif q.upper().startswith("TKT-"):
-        answer = get_ticket(q)
+    # -------------------------
+    # Excel
+    # -------------------------
+    elif user.lower() == "excel":
+        st.chat_message("assistant").markdown(get_excel_info())
 
+    # -------------------------
+    # Order
+    # -------------------------
+    elif user.upper().startswith("ORD-"):
+        st.chat_message("assistant").markdown(get_order(user))
+
+    # -------------------------
+    # Ticket
+    # -------------------------
+    elif user.upper().startswith("TKT-"):
+        st.chat_message("assistant").markdown(get_ticket(user))
+
+    # -------------------------
     # Escalation
-    elif q.lower().startswith("escalate"):
-        ticket = q.split()[-1].upper()
-        st.session_state.pending_ticket = ticket
-        answer = create_escalation(ticket)
+    # -------------------------
+    elif user.lower().startswith("escalate"):
+        ticket = user.split()[-1].upper()
+        st.session_state.pending_escalation = ticket
+        st.chat_message("assistant").markdown(create_escalation(ticket))
 
-    # Confirmation
-    elif q.upper() == "CONFIRM":
-        if st.session_state.pending_ticket:
-            answer = f"""
-## ✅ Escalation Created Successfully
+    elif user.upper() == "CONFIRM":
+        if st.session_state.pending_escalation:
+            ticket = st.session_state.pending_escalation
+            st.chat_message("assistant").success(
+                f"""✅ Escalation Created Successfully
 
-**Ticket:** {st.session_state.pending_ticket}
+**Ticket:** {ticket}
 
-The ticket has been assigned to Backend Engineering with **P1 Priority**.
+Assigned to **Backend Engineering** with **P1 Priority**.
 """
-            st.session_state.pending_ticket = None
+            )
+            st.session_state.pending_escalation = None
         else:
-            answer = "No pending escalation found."
+            st.chat_message("assistant").warning("No pending escalation found.")
 
-    # PDF or AI reply
+    # -------------------------
+    # AI Resolution
+    # -------------------------
+    elif (
+        "shipment" in user.lower()
+        or "500" in user.lower()
+        or "cancellation" in user.lower()
+        or "service credit" in user.lower()
+    ):
+        st.chat_message("assistant").markdown(ai_reply(user))
+
+    # -------------------------
+    # PDF Search
+    # -------------------------
     else:
-        pdf = search_documents(q)
+        result = search_documents(user)
 
-        if pdf != "No matching policy found.":
-            answer = pdf
+        if result == "No matching policy found.":
+            st.chat_message("assistant").markdown(
+                "I couldn't find an exact answer. Try **ORD-1001**, **TKT-501**, **support policy**, or **escalate TKT-501**."
+            )
         else:
-            answer = ai_reply(q)
-
-    st.session_state.messages.append(("assistant", answer))
-    st.rerun()
+            st.chat_message("assistant").markdown(result)
