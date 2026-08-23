@@ -184,7 +184,7 @@ These features were intentionally excluded to keep the project focused on the as
 
 ## Author
 
-**Kirti Garg**
+**Anmol Goel**
 
 B.Tech Computer Science Engineering
 
